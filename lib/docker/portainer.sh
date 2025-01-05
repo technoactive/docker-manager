@@ -7,7 +7,7 @@ install_portainer() {
     if ! command -v docker &> /dev/null; then
         print_error "Docker is not installed. Please install Docker first."
         return
-    }
+    fi
 
     # Port configuration
     while true; do
@@ -36,8 +36,8 @@ install_portainer() {
         local server_ip=$(get_server_ip)
         print_success "Portainer installed successfully!"
         echo -e "${GREEN}Access Portainer at:${NC}"
-        echo " Local: https://localhost:$port"
-        echo " Remote: https://$server_ip:$port"
+        echo "? Local: https://localhost:$port"
+        echo "? Remote: https://$server_ip:$port"
     fi
 }
 
