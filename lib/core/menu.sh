@@ -25,7 +25,7 @@ show_main_menu() {
         echo " 11) View Logs"
         echo " 12) Exit"
         echo
-        read -p "Enter your choice (1-12): " choice
+        read -rp "Enter your choice (1-12): " choice
         
         case $choice in
             1) install_docker_root ;;
