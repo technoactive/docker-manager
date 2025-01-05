@@ -29,12 +29,8 @@ detect_installation() {
 
         # Check Portainer
         if docker ps -a 2>/dev/null | grep -q portainer; then
-            PORTAINER_VERSION=$(docker inspect portainer | grep -m 1 '"Image":' | awk -F':' '{print $3}' | tr -d '"},' | tr -d " ")
-            if [ -n "$PORTAINER_VERSION" ]; then
-                print_info "Portainer is installed (Version: $PORTAINER_VERSION)"
-            else
-                print_info "Portainer is installed (Version: Unable to determine)"
-            fi
+            PORTAINER_VERSION=$(docker exec portainer /portainer --version 2>/dev/null || echo "version unknown")
+            print_info "Portainer is installed (Version: $PORTAINER_VERSION)"
             PORTAINER_INSTALLED=true
         else
             print_info "Portainer is not installed"
@@ -51,4 +47,26 @@ detect_installation() {
 
     echo
     read -p "Press Enter to continue..."
+}
+
+check_versions() {
+    if command -v docker &>/dev/null; then
+        local current_version=$(docker --version | awk '{print $3}' | sed 's/,//')
+        local latest_version=$(curl -m 10 --retry 3 -s https://api.github.com/repos/docker/docker-ce/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
+        
+        if [ -n "$latest_version" ] && [ "$current_version" != "$latest_version" ]; then
+            print_info "A new Docker version is available: $latest_version"
+            print_info "Current version: $current_version"
+        fi
+
+        if docker compose version &> /dev/null; then
+            local compose_version=$(docker compose version --short 2>/dev/null)
+            print_info "Docker Compose version: $compose_version"
+        fi
+
+        if docker ps -a 2>/dev/null | grep -q portainer; then
+            local portainer_version=$(docker exec portainer /portainer --version 2>/dev/null || echo "version unknown")
+            print_info "Portainer version: $portainer_version"
+        fi
+    fi
 }
