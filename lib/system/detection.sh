@@ -29,7 +29,17 @@ detect_installation() {
 
         # Check Portainer
         if docker ps -a 2>/dev/null | grep -q portainer; then
-            PORTAINER_VERSION=$(docker exec portainer /portainer --version 2>/dev/null || echo "version unknown")
+            # Try multiple methods to get Portainer version
+            PORTAINER_VERSION=$(docker inspect portainer 2>/dev/null | grep -m 1 '"Image": "portainer/portainer-ce:' | grep -o 'ce:.*"' | sed 's/ce://;s/"//g')
+            if [ -z "$PORTAINER_VERSION" ]; then
+                PORTAINER_VERSION=$(curl -s http://localhost:9443/api/status 2>/dev/null | grep -o '"Version":"[^"]*"' | cut -d'"' -f4)
+            fi
+            if [ -z "$PORTAINER_VERSION" ]; then
+                PORTAINER_VERSION=$(docker exec portainer portainer --version 2>/dev/null)
+            fi
+            if [ -z "$PORTAINER_VERSION" ]; then
+                PORTAINER_VERSION="CE latest"
+            fi
             print_info "Portainer is installed (Version: $PORTAINER_VERSION)"
             PORTAINER_INSTALLED=true
         else
@@ -65,7 +75,10 @@ check_versions() {
         fi
 
         if docker ps -a 2>/dev/null | grep -q portainer; then
-            local portainer_version=$(docker exec portainer /portainer --version 2>/dev/null || echo "version unknown")
+            local portainer_version=$(docker inspect portainer 2>/dev/null | grep -m 1 '"Image": "portainer/portainer-ce:' | grep -o 'ce:.*"' | sed 's/ce://;s/"//g')
+            if [ -z "$portainer_version" ]; then
+                portainer_version="CE latest"
+            fi
             print_info "Portainer version: $portainer_version"
         fi
     fi
