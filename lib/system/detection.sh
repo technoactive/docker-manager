@@ -29,18 +29,21 @@ detect_installation() {
 
         # Check Portainer
         if docker ps -a 2>/dev/null | grep -q portainer; then
-            # Try multiple methods to get Portainer version
-            PORTAINER_VERSION=$(docker inspect portainer 2>/dev/null | grep -m 1 '"Image": "portainer/portainer-ce:' | grep -o 'ce:.*"' | sed 's/ce://;s/"//g')
-            if [ -z "$PORTAINER_VERSION" ]; then
-                PORTAINER_VERSION=$(curl -s http://localhost:9443/api/status 2>/dev/null | grep -o '"Version":"[^"]*"' | cut -d'"' -f4)
+            # Get Portainer container status
+            CONTAINER_STATUS=$(docker inspect -f '{{.State.Status}}' portainer 2>/dev/null)
+            PORTAINER_TAG=$(docker inspect -f '{{.Config.Image}}' portainer 2>/dev/null | awk -F':' '{print $2}')
+            
+            if [ "$CONTAINER_STATUS" = "running" ]; then
+                STATUS_MSG="running"
+            else
+                STATUS_MSG="stopped"
             fi
-            if [ -z "$PORTAINER_VERSION" ]; then
-                PORTAINER_VERSION=$(docker exec portainer portainer --version 2>/dev/null)
+
+            if [ "$PORTAINER_TAG" = "latest" ] || [ -z "$PORTAINER_TAG" ]; then
+                print_info "Portainer CE is installed (latest version, $STATUS_MSG)"
+            else
+                print_info "Portainer CE is installed (Version: $PORTAINER_TAG, $STATUS_MSG)"
             fi
-            if [ -z "$PORTAINER_VERSION" ]; then
-                PORTAINER_VERSION="CE latest"
-            fi
-            print_info "Portainer is installed (Version: $PORTAINER_VERSION)"
             PORTAINER_INSTALLED=true
         else
             print_info "Portainer is not installed"
@@ -57,29 +60,4 @@ detect_installation() {
 
     echo
     read -p "Press Enter to continue..."
-}
-
-check_versions() {
-    if command -v docker &>/dev/null; then
-        local current_version=$(docker --version | awk '{print $3}' | sed 's/,//')
-        local latest_version=$(curl -m 10 --retry 3 -s https://api.github.com/repos/docker/docker-ce/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
-        
-        if [ -n "$latest_version" ] && [ "$current_version" != "$latest_version" ]; then
-            print_info "A new Docker version is available: $latest_version"
-            print_info "Current version: $current_version"
-        fi
-
-        if docker compose version &> /dev/null; then
-            local compose_version=$(docker compose version --short 2>/dev/null)
-            print_info "Docker Compose version: $compose_version"
-        fi
-
-        if docker ps -a 2>/dev/null | grep -q portainer; then
-            local portainer_version=$(docker inspect portainer 2>/dev/null | grep -m 1 '"Image": "portainer/portainer-ce:' | grep -o 'ce:.*"' | sed 's/ce://;s/"//g')
-            if [ -z "$portainer_version" ]; then
-                portainer_version="CE latest"
-            fi
-            print_info "Portainer version: $portainer_version"
-        fi
-    fi
 }
