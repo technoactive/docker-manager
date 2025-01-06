@@ -55,8 +55,32 @@ install_docker_root() {
 
     create_recovery_script
     print_success "Docker installed successfully!"
-    check_versions
+
+    # Show installed versions
+    docker_version=$(docker --version | awk '{print $3}' | sed 's/,//')
+    compose_version=$(docker compose version --short 2>/dev/null)
+    
+    print_info "Docker Engine Version: $docker_version"
+    print_info "Docker Compose Version: $compose_version"
+    
+    # Check for latest versions
+    check_latest_versions
+
     read -p "Press Enter to continue..."
+}
+
+check_latest_versions() {
+    local latest_docker_version=$(curl -m 10 --retry 3 -s https://api.github.com/repos/docker/docker-ce/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
+    local current_docker_version=$(docker --version | awk '{print $3}' | sed 's/,//')
+    
+    if [ -n "$latest_docker_version" ] && [ "$current_docker_version" != "$latest_docker_version" ]; then
+        print_info "A new Docker version is available: $latest_docker_version (Current: $current_docker_version)"
+    fi
+    
+    if command -v docker-compose &>/dev/null || (command -v docker &>/dev/null && docker compose version &>/dev/null); then
+        local compose_version=$(docker compose version --short 2>/dev/null)
+        print_info "Docker Compose version: $compose_version"
+    fi
 }
 
 install_docker_rootless() {
@@ -83,5 +107,16 @@ install_docker_rootless() {
     su - $DOCKER_USER -c "curl -fsSL https://get.docker.com/rootless | sh"
 
     print_success "Rootless Docker installed successfully!"
+    
+    # Show installed versions
+    docker_version=$(docker --version | awk '{print $3}' | sed 's/,//')
+    compose_version=$(docker compose version --short 2>/dev/null)
+    
+    print_info "Docker Engine Version: $docker_version"
+    print_info "Docker Compose Version: $compose_version"
+    
+    # Check for latest versions
+    check_latest_versions
+
     read -p "Press Enter to continue..."
 }
