@@ -1,5 +1,14 @@
 #!/bin/bash
 
+check_portainer_updates() {
+    # Get the latest version from Portainer API
+    local latest_version=$(curl -s https://api.github.com/repos/portainer/portainer/releases/latest | grep -oP '"tag_name": "\K(.*)(?=")')
+    if [ -n "$latest_version" ]; then
+        print_info "Latest available Portainer version: $latest_version"
+        print_info "To update, use the Update Portainer option from the menu"
+    fi
+}
+
 detect_installation() {
     print_header
     echo -e "${BLUE}Checking your current installation...${NC}\n"
@@ -40,9 +49,12 @@ detect_installation() {
             fi
 
             if [ "$PORTAINER_TAG" = "latest" ] || [ -z "$PORTAINER_TAG" ]; then
-                print_info "Portainer CE is installed (latest version, $STATUS_MSG)"
+                print_info "Portainer CE is installed ($STATUS_MSG)"
+                # Check for updates
+                check_portainer_updates
             else
                 print_info "Portainer CE is installed (Version: $PORTAINER_TAG, $STATUS_MSG)"
+                check_portainer_updates
             fi
             PORTAINER_INSTALLED=true
         else
